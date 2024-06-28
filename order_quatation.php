@@ -43,28 +43,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 // Define API endpoint
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle POST request for updating order with PDF and model file
+    // Handle POST request for updating order with PDF, model file, and JSON file
 
     if (isset($_POST['order_id'])) {
         $orderId = $_POST['order_id'];
 
-        // Check if the PDF file and customize model file are uploaded successfully
-        if (isset($_FILES['pdf_file']['tmp_name']) && isset($_FILES['customize_model_file']['tmp_name'])) {
-            // Define upload directory for the PDF file and customize model file
+        // Check if the PDF file, customize model file, and JSON file are uploaded successfully
+        if (isset($_FILES['pdf_file']['tmp_name']) && isset($_FILES['customize_model_file']['tmp_name']) && isset($_FILES['customize_json_file']['tmp_name'])) {
+            // Define upload directories
             $pdfUploadDir = 'order-quotations/';
             $customizeModelUploadDir = 'customized_models/';
+            $customizeJsonUploadDir = 'customized_jsons/';
 
             // Move uploaded PDF file to the directory
             $pdfFile = $pdfUploadDir . basename($_FILES['pdf_file']['name']);
-
             // Move uploaded customize model file to the directory
             $customizeModelFile = $customizeModelUploadDir . basename($_FILES['customize_model_file']['name']);
+            // Move uploaded JSON file to the directory
+            $customizeJsonFile = $customizeJsonUploadDir . basename($_FILES['customize_json_file']['name']);
 
-            if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $pdfFile) && move_uploaded_file($_FILES['customize_model_file']['tmp_name'], $customizeModelFile)) {
+            if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $pdfFile) && move_uploaded_file($_FILES['customize_model_file']['tmp_name'], $customizeModelFile) && move_uploaded_file($_FILES['customize_json_file']['tmp_name'], $customizeJsonFile)) {
                 // Update the order entry with the file paths
-                $updateQuery = "UPDATE order_quotation SET pdf_file = ?, customized_model_file = ? WHERE id = ?";
+                $updateQuery = "UPDATE order_quotation SET pdf_file = ?, customized_model_file = ?, customized_json = ? WHERE id = ?";
                 $stmt = mysqli_prepare($db, $updateQuery);
-                mysqli_stmt_bind_param($stmt, 'ssi', $pdfFile, $customizeModelFile, $orderId);
+                mysqli_stmt_bind_param($stmt, 'sssi', $pdfFile, $customizeModelFile, $customizeJsonFile, $orderId);
                 mysqli_stmt_execute($stmt);
 
                 // Check if update was successful
@@ -105,10 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $mail->addAddress($order['user_details'], 'Recipient Name');
     
                             // Attachments
-                            $mail->addAttachment($pdfFile);         // Add attachments
+                            $mail->addAttachment($pdfFile); // Add attachments
+                            $mail->addAttachment($customizeModelFile); // Add model file as attachment
+                            $mail->addAttachment($customizeJsonFile); // Add JSON file as attachment
     
                             // Content
-                            $mail->isHTML(true);    
+                            $mail->isHTML(true);
                             $currentDate = date("Y-m-d");  // Set email format to HTML
                             $mail->Subject = $row['email_subject'] . " - " . $currentDate;
                             $body = $row['email_content'];
